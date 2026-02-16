@@ -538,7 +538,7 @@ function App() {
     return (
       <div className="login-container">
         <div className="card login-card" style={{ maxWidth: '400px', textAlign: 'center' }}>
-          <img src="/logo.png" alt="FerApp Logo" style={{ width: '180px', height: '180px', marginBottom: '2rem' }} />
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="FerApp Logo" style={{ width: '180px', height: '180px', marginBottom: '2rem' }} />
           <h1 style={{ fontSize: '2.5rem', color: 'var(--primary-navy)', marginBottom: '1rem' }}>BIENVENIDO</h1>
           <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem' }}>Gestiona tus tareas y servicios de forma profesional.</p>
           <button onClick={handleLogin} className="google-btn">
@@ -560,7 +560,7 @@ function App() {
       {/* Sidebar Modules */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <img src="/logo.png" alt="FerApp Logo" style={{ width: '160px', height: '160px', objectFit: 'contain' }} />
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="FerApp Logo" style={{ width: '160px', height: '160px', objectFit: 'contain' }} />
           {user && (
             <div style={{
               marginTop: '1rem',
