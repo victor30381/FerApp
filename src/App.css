@@ -1,0 +1,13 @@
+.App {
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .completed-tasks {
+    grid-column: 1;
+  }
+}
