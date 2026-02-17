@@ -1,11 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Make sure the uid of the requesting user matches the name of the user
-    // document. The wildcard expression {userId} makes the userId variable
-    // available in rules.
+    // REGLAS DE DEPURACION (DEBUG)
+    // Permite a cualquier usuario validado leer/escribir en la carpeta de usuarios
+    // Esto es para probar si el error es la coincidencia de ID o la estructura
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+       allow read, write: if request.auth != null;
     }
   }
 }
