@@ -162,41 +162,43 @@ function App() {
     if (!user) return;
     console.log("Usuario autenticado, iniciando sincronización...");
 
-    const unsubTasks = onSnapshot(collection(db, 'tasks'), (snapshot) => {
+    const userRef = (collectionName: string) => collection(db, `users/${user.uid}/${collectionName}`);
+
+    const unsubTasks = onSnapshot(userRef('tasks'), (snapshot) => {
       console.log("Tareas cargadas:", snapshot.size);
       const allTasks = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.data().id || Number(doc.id) } as Task));
       setPendingTasks(allTasks.filter(t => !t.completed));
       setCompletedTasks(allTasks.filter(t => t.completed));
     }, error => console.error("Error tasks:", error));
 
-    const unsubProviders = onSnapshot(collection(db, 'providers'), (snapshot) => {
+    const unsubProviders = onSnapshot(userRef('providers'), (snapshot) => {
       console.log("Proveedores cargados:", snapshot.size);
       setProviders(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.data().id || Number(doc.id) } as Provider)));
     }, error => alert("Error cargando proveedores: " + error.message));
 
-    const unsubServices = onSnapshot(collection(db, 'service_providers'), (snapshot) => {
+    const unsubServices = onSnapshot(userRef('service_providers'), (snapshot) => {
       console.log("Servicios cargados:", snapshot.size);
       setServices(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.data().id || Number(doc.id) } as Service)));
     }, error => console.error("Error services:", error));
 
-    const unsubEmployees = onSnapshot(collection(db, 'employees'), (snapshot) => {
+    const unsubEmployees = onSnapshot(userRef('employees'), (snapshot) => {
       console.log("Empleados cargados:", snapshot.size);
       setEmployees(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.data().id || Number(doc.id) } as Employee)));
     }, error => console.error("Error employees:", error));
 
-    const unsubOrders = onSnapshot(collection(db, 'orders'), (snapshot) => {
+    const unsubOrders = onSnapshot(userRef('orders'), (snapshot) => {
       setOrders(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.data().id || Number(doc.id) })));
     }, error => console.error("Error orders:", error));
 
-    const unsubServiceRequests = onSnapshot(collection(db, 'service_requests'), (snapshot) => {
+    const unsubServiceRequests = onSnapshot(userRef('service_requests'), (snapshot) => {
       setServiceRequests(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.data().id || Number(doc.id) })));
     }, error => console.error("Error requests:", error));
 
-    const unsubCalls = onSnapshot(collection(db, 'calls'), (snapshot) => {
+    const unsubCalls = onSnapshot(userRef('calls'), (snapshot) => {
       setCalls(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.data().id || Number(doc.id) })));
     }, error => console.error("Error calls:", error));
 
-    const unsubReminders = onSnapshot(collection(db, 'reminders'), (snapshot) => {
+    const unsubReminders = onSnapshot(userRef('reminders'), (snapshot) => {
       setScheduledReminders(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.data().id || Number(doc.id) } as ScheduledReminder)));
     }, error => console.error("Error reminders:", error));
 
@@ -231,10 +233,15 @@ function App() {
     setIsDayModalOpen(true);
   };
 
+  const getUserDoc = (collectionName: string, id: string | number) => {
+    if (!user) throw new Error("User not authenticated");
+    return doc(db, `users/${user.uid}/${collectionName}`, id.toString());
+  };
+
   const addScheduledReminder = async () => {
-    if (newReminderText.trim()) {
+    if (newReminderText.trim() && user) {
       const id = Date.now();
-      await setDoc(doc(db, 'reminders', id.toString()), {
+      await setDoc(getUserDoc('reminders', id), {
         date: selectedDate,
         text: newReminderText.trim().toUpperCase()
       });
@@ -243,8 +250,8 @@ function App() {
   };
 
   const deleteReminder = async (id: number) => {
-    if (confirm('¿DESEA ELIMINAR ESTE RECORDATORIO?')) {
-      await deleteDoc(doc(db, 'reminders', id.toString()));
+    if (confirm('¿DESEA ELIMINAR ESTE RECORDATORIO?') && user) {
+      await deleteDoc(getUserDoc('reminders', id));
     }
   };
 
@@ -254,8 +261,8 @@ function App() {
   };
 
   const saveEditReminder = async () => {
-    if (editingReminderId && editingReminderText.trim()) {
-      await updateDoc(doc(db, 'reminders', editingReminderId.toString()), {
+    if (editingReminderId && editingReminderText.trim() && user) {
+      await updateDoc(getUserDoc('reminders', editingReminderId), {
         text: editingReminderText.trim().toUpperCase()
       });
       setEditingReminderId(null);
@@ -264,9 +271,9 @@ function App() {
   };
 
   const addTask = async () => {
-    if (newTaskText.trim()) {
+    if (newTaskText.trim() && user) {
       const id = Date.now();
-      await setDoc(doc(db, 'tasks', id.toString()), {
+      await setDoc(getUserDoc('tasks', id), {
         text: newTaskText.trim().toUpperCase(),
         completed: false,
         date: getTodayStr()
@@ -276,8 +283,8 @@ function App() {
   };
 
   const deleteTask = async (id: number) => {
-    if (confirm('¿DECEAS ELIMINAR ESTA TAREA?')) {
-      await deleteDoc(doc(db, 'tasks', id.toString()));
+    if (confirm('¿DECEAS ELIMINAR ESTA TAREA?') && user) {
+      await deleteDoc(getUserDoc('tasks', id));
     }
   };
 
@@ -287,8 +294,8 @@ function App() {
   };
 
   const saveEditTask = async () => {
-    if (editingTaskText.trim() && editingTaskId) {
-      await updateDoc(doc(db, 'tasks', editingTaskId.toString()), {
+    if (editingTaskText.trim() && editingTaskId && user) {
+      await updateDoc(getUserDoc('tasks', editingTaskId), {
         text: editingTaskText.trim().toUpperCase()
       });
       setEditingTaskId(null);
@@ -296,27 +303,28 @@ function App() {
   };
 
   const completeTask = async (id: number) => {
-    if (!id || id === 0) return;
-    await updateDoc(doc(db, 'tasks', id.toString()), {
+    if (!id || id === 0 || !user) return;
+    await updateDoc(getUserDoc('tasks', id), {
       completed: true
     });
   };
 
   const toggleTask = async (id: number, currentCompleted: boolean) => {
-    await updateDoc(doc(db, 'tasks', id.toString()), {
+    if (!user) return;
+    await updateDoc(getUserDoc('tasks', id), {
       completed: !currentCompleted
     });
   };
 
   const addProvider = async () => {
-    if (newProvider.name.trim()) {
+    if (newProvider.name.trim() && user) {
       try {
         if (selectedProvider) {
-          await updateDoc(doc(db, 'providers', selectedProvider.id.toString()), newProvider);
+          await updateDoc(getUserDoc('providers', selectedProvider.id), newProvider);
           setSelectedProvider(null);
         } else {
           const id = Date.now();
-          await setDoc(doc(db, 'providers', id.toString()), { ...newProvider, id });
+          await setDoc(getUserDoc('providers', id), { ...newProvider, id });
         }
         setIsAddProviderOpen(false);
         setNewProvider({ name: '', phone: '', address: '', observations: '' });
@@ -327,9 +335,9 @@ function App() {
   };
 
   const deleteProvider = async (id: number) => {
-    if (confirm('¿DECEAS ELIMINAR ESTE PROVEEDOR?')) {
+    if (confirm('¿DECEAS ELIMINAR ESTE PROVEEDOR?') && user) {
       try {
-        await deleteDoc(doc(db, 'providers', id.toString()));
+        await deleteDoc(getUserDoc('providers', id));
       } catch (error) {
         console.error("Error deleting provider:", error);
       }
@@ -349,14 +357,14 @@ function App() {
 
   // Services Logic
   const addService = async () => {
-    if (newService.name.trim()) {
+    if (newService.name.trim() && user) {
       try {
         if (selectedService) {
-          await updateDoc(doc(db, 'service_providers', selectedService.id.toString()), newService);
+          await updateDoc(getUserDoc('service_providers', selectedService.id), newService);
           setSelectedService(null);
         } else {
           const id = Date.now();
-          await setDoc(doc(db, 'service_providers', id.toString()), { ...newService, id });
+          await setDoc(getUserDoc('service_providers', id), { ...newService, id });
         }
         setIsAddServiceOpen(false);
         setNewService({ name: '', phone: '', address: '', observations: '' });
@@ -367,9 +375,9 @@ function App() {
   };
 
   const deleteService = async (id: number) => {
-    if (confirm('¿Estás seguro de que deseas eliminar este servicio?')) {
+    if (confirm('¿Estás seguro de que deseas eliminar este servicio?') && user) {
       try {
-        await deleteDoc(doc(db, 'service_providers', id.toString()));
+        await deleteDoc(getUserDoc('service_providers', id));
       } catch (error) {
         console.error("Error deleting service:", error);
       }
@@ -388,14 +396,14 @@ function App() {
   };
 
   const addEmployee = async () => {
-    if (newEmployee.name.trim()) {
+    if (newEmployee.name.trim() && user) {
       try {
         if (selectedEmployee) {
-          await updateDoc(doc(db, 'employees', selectedEmployee.id.toString()), newEmployee);
+          await updateDoc(getUserDoc('employees', selectedEmployee.id), newEmployee);
           setSelectedEmployee(null);
         } else {
           const id = Date.now();
-          await setDoc(doc(db, 'employees', id.toString()), { ...newEmployee, id });
+          await setDoc(getUserDoc('employees', id), { ...newEmployee, id });
         }
         setIsAddEmployeeOpen(false);
         setNewEmployee({ name: '', role: '', phone: '', observations: '' });
@@ -406,9 +414,9 @@ function App() {
   };
 
   const deleteEmployee = async (id: number) => {
-    if (confirm('¿DECEAS ELIMINAR ESTE EMPLEADO?')) {
+    if (confirm('¿DECEAS ELIMINAR ESTE EMPLEADO?') && user) {
       try {
-        await deleteDoc(doc(db, 'employees', id.toString()));
+        await deleteDoc(getUserDoc('employees', id));
       } catch (error) {
         console.error("Error deleting employee:", error);
       }
@@ -428,9 +436,9 @@ function App() {
 
   // Orders Logic
   const handleCreateOrder = async () => {
-    if (newOrder.providerId !== 0 && newOrder.orderDetails.trim()) {
+    if (newOrder.providerId !== 0 && newOrder.orderDetails.trim() && user) {
       const id = newOrder.id !== 0 ? newOrder.id : Date.now();
-      await setDoc(doc(db, 'orders', id.toString()), { ...newOrder, id, type: 'order' });
+      await setDoc(getUserDoc('orders', id), { ...newOrder, id, type: 'order' });
 
       if (newOrder.taskId && newOrder.taskId !== 0) {
         completeTask(newOrder.taskId);
@@ -447,14 +455,14 @@ function App() {
         taskId: 0
       });
     } else {
-      console.warn('Incomplete order data');
+      console.warn('Incomplete order data or user not logged in');
     }
   };
 
   const handleCreateServiceRequest = async () => {
-    if (newServiceRequest.serviceId !== 0 && newServiceRequest.details.trim()) {
+    if (newServiceRequest.serviceId !== 0 && newServiceRequest.details.trim() && user) {
       const id = newServiceRequest.id !== 0 ? newServiceRequest.id : Date.now();
-      await setDoc(doc(db, 'service_requests', id.toString()), { ...newServiceRequest, id, type: 'service' });
+      await setDoc(getUserDoc('service_requests', id), { ...newServiceRequest, id, type: 'service' });
 
       if (newServiceRequest.taskId && newServiceRequest.taskId !== 0) {
         completeTask(newServiceRequest.taskId);
@@ -471,14 +479,14 @@ function App() {
         taskId: 0
       });
     } else {
-      console.warn('Incomplete service request data');
+      console.warn('Incomplete service request data or user not logged in');
     }
   };
 
   const handleCreateCall = async () => {
-    if (newCall.employeeId !== 0 && newCall.reason.trim()) {
+    if (newCall.employeeId !== 0 && newCall.reason.trim() && user) {
       const id = newCall.id !== 0 ? newCall.id : Date.now();
-      await setDoc(doc(db, 'calls', id.toString()), { ...newCall, id, type: 'call' });
+      await setDoc(getUserDoc('calls', id), { ...newCall, id, type: 'call' });
 
       if (newCall.taskId && newCall.taskId !== 0) {
         completeTask(newCall.taskId);
@@ -494,12 +502,12 @@ function App() {
         taskId: 0
       });
     } else {
-      console.warn('Incomplete call data');
+      console.warn('Incomplete call data or user not logged in');
     }
   };
 
   const handleDeleteAction = async (action: any) => {
-    if (!window.confirm('¿Está seguro de que desea eliminar este registro?')) return;
+    if (!window.confirm('¿Está seguro de que desea eliminar este registro?') || !user) return;
 
     const collectionName =
       action.type === 'order' ? 'orders' :
@@ -507,7 +515,7 @@ function App() {
           action.type === 'call' ? 'calls' : '';
 
     if (collectionName) {
-      await deleteDoc(doc(db, collectionName, action.id.toString()));
+      await deleteDoc(getUserDoc(collectionName, action.id));
     }
     setIsDetailModalOpen(false);
   };
