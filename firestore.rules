@@ -1,11 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // REGLAS DE DEPURACION (DEBUG)
-    // Permite a cualquier usuario validado leer/escribir en la carpeta de usuarios
-    // Esto es para probar si el error es la coincidencia de ID o la estructura
+    
+    // Regla estricta: El usuario solo puede leer/escribir en su propia carpeta
     match /users/{userId}/{document=**} {
-       allow read, write: if request.auth != null;
+       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
